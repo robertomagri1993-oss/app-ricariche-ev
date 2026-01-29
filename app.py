@@ -5,7 +5,21 @@ import time
 from streamlit_gsheets import GSheetsConnection
 
 # --- CONFIGURAZIONE PAGINA ---
-st.set_page_config(page_title="Tesla Model 3 Manager", page_icon="⚡", layout="wide")
+# Sostituisci l'emoji con l'URL del tuo logo per l'icona del browser (favicon)
+st.set_page_config(page_title="Tesla Manager", page_icon="⚡", layout="wide")
+
+# --- PERSONALIZZAZIONE LOGO IPHONE (APPLE TOUCH ICON) ---
+# INCOLLA IL LINK DEL TUO LOGO DOVE C'È "IL_TUO_LINK_QUI"
+URL_LOGO_PERSONALIZZATO = "<a href='https://postimg.cc/4HcKzRYj' target='_blank'><img src='https://i.postimg.cc/4HcKzRYj/domohome.png' border='0' alt='domohome'></a>" 
+
+st.markdown(
+    f"""
+    <head>
+        <link rel="apple-touch-icon" href="{URL_LOGO_PERSONALIZZATO}">
+    </head>
+    """,
+    unsafe_allow_html=True
+)
 
 # --- CSS PER NASCONDERE IL BRANDING STREAMLIT ---
 hide_st_style = """
@@ -14,6 +28,11 @@ hide_st_style = """
             footer {visibility: hidden;}
             header {visibility: hidden;}
             .stAppDeployButton {display:none;}
+            /* Rende l'app più simile a un'app nativa su mobile */
+            .stApp {
+                max-width: 100%;
+                padding-top: 1rem;
+            }
             </style>
             """
 st.markdown(hide_st_style, unsafe_allow_html=True)
