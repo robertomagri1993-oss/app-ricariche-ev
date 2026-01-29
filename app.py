@@ -62,7 +62,7 @@ tab1, tab2 = st.tabs(["🏠 Home", "📊 Storico & Config"])
 # TAB 1: HOME (MODIFICATA)
 # ==========================================
 with tab1:
-    st.title(f"⚡ Tesla Manager {ANNO_CORRENTE}")
+    st.title(f"⚡ Home Charge {ANNO_CORRENTE}")
     
     with st.container(border=True):
         # value=None rende il campo vuoto all'avvio
