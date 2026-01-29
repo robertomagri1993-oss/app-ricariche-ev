@@ -93,19 +93,18 @@ with tab1:
     with st.container(border=True):
         col_inp, col_dummy = st.columns([2,1])
         
-        # --- MODIFICA QUI: value=None rende il campo vuoto ---
+        # Campo vuoto all'avvio (value=None)
         kwh_in = col_inp.number_input(
             f"Inserisci kWh", 
             min_value=0.0, 
             step=0.1, 
-            value=None,          # <--- Questa è la chiave: campo vuoto all'avvio
-            placeholder="0.0"    # Testo fantasma
+            value=None,          
+            placeholder="0.0"    
         )
         
         col_reg, col_del = st.columns(2)
         
         if col_reg.button("REGISTRA", use_container_width=True, type="primary"):
-            # Verifica che l'utente abbia scritto qualcosa (kwh_in non è None)
             if kwh_in is not None and kwh_in > 0:
                 nuova_r = pd.DataFrame([{
                     "Data": OGGI.strftime("%Y-%m-%d"), 
@@ -166,25 +165,8 @@ with tab2:
     st.divider()
     st.header("⚙️ Impostazioni")
     
-    # --- CONFIG PREZZO BENZINA ---
-    with st.expander("⛽ Prezzo Benzina"):
-        col_a, col_p = st.columns(2)
-        tg_year = col_a.selectbox("Anno", [str(y) for y in range(2024, 2031)], index=2)
-        tg_price = col_p.number_input("Prezzo Benzina", value=1.85, format="%.3f")
-        
-        if st.button("Salva Benzina"):
-            df_c_t = df_config.copy()
-            if not df_c_t.empty: 
-                df_c_t['Anno'] = pd.to_numeric(df_c_t['Anno'], errors='coerce').fillna(0).astype(int).astype(str)
-            
-            df_fin = pd.concat([df_c_t[df_c_t['Anno'] != str(tg_year)], 
-                               pd.DataFrame([{"Anno": str(tg_year), "Prezzo_Benzina": tg_price}])], ignore_index=True)
-            conn.update(worksheet="Config", data=df_fin)
-            st.cache_data.clear()
-            st.rerun()
-
-    # --- CONFIG TARIFFE LUCE ---
-    with st.expander("📅 Tariffa Luce"):
+    # --- PRIMA LE TARIFFE LUCE ---
+    with st.expander("📅 Tariffa Luce", expanded=True): # expanded=True lo tiene aperto se preferisci
         c1, c2 = st.columns(2)
         t_anno = c1.selectbox("Anno", [str(y) for y in range(2024, 2031)], index=2, key="t_a")
         t_mese = c2.selectbox("Mese", mesi_ita, key="t_m")
@@ -216,4 +198,21 @@ with tab2:
             st.cache_data.clear()
             st.success(f"Tariffa salvata! ({t_mese}={num_mese})")
             time.sleep(1)
+            st.rerun()
+
+    # --- POI LA BENZINA ---
+    with st.expander("⛽ Prezzo Benzina"):
+        col_a, col_p = st.columns(2)
+        tg_year = col_a.selectbox("Anno", [str(y) for y in range(2024, 2031)], index=2)
+        tg_price = col_p.number_input("Prezzo Benzina", value=1.85, format="%.3f")
+        
+        if st.button("Salva Benzina"):
+            df_c_t = df_config.copy()
+            if not df_c_t.empty: 
+                df_c_t['Anno'] = pd.to_numeric(df_c_t['Anno'], errors='coerce').fillna(0).astype(int).astype(str)
+            
+            df_fin = pd.concat([df_c_t[df_c_t['Anno'] != str(tg_year)], 
+                               pd.DataFrame([{"Anno": str(tg_year), "Prezzo_Benzina": tg_price}])], ignore_index=True)
+            conn.update(worksheet="Config", data=df_fin)
+            st.cache_data.clear()
             st.rerun()
