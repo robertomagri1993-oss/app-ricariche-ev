@@ -27,7 +27,7 @@ OGGI = datetime.now()
 ANNO_CORRENTE = str(OGGI.year)
 MESE_CORRENTE = mesi_ita[OGGI.month - 1]
 
-# --- CACHE DEI DATI (Lettura) ---
+# --- CACHE DEI DATI ---
 @st.cache_data(ttl=600)
 def fetch_raw_data():
     try:
@@ -39,7 +39,7 @@ def fetch_raw_data():
         st.error(f"Errore connessione GSheets: {e}")
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
-# --- CACHE DEI CALCOLI (Logica Fisica/Economica) ---
+# --- CACHE DEI CALCOLI ---
 @st.cache_data
 def compute_analytics(df_r, df_t, df_c):
     if df_r is None or df_r.empty: return pd.DataFrame()
@@ -49,28 +49,28 @@ def compute_analytics(df_r, df_t, df_c):
     df_r['Data'] = pd.to_datetime(df_r['Data'])
     df_r['Anno'] = df_r['Data'].dt.year.astype(str)
     
-    # 2. Config (Benzina)
+    # 2. Config
     df_c_clean = df_c.copy() if df_c is not None and not df_c.empty else pd.DataFrame(columns=['Anno', 'Prezzo_Benzina'])
     if not df_c_clean.empty:
         df_c_clean['Anno'] = pd.to_numeric(df_c_clean['Anno'], errors='coerce').fillna(0).astype(int).astype(str)
     
-    # 3. Tariffe (Luce)
+    # 3. Tariffe
     df_t_clean = df_t.copy() if df_t is not None and not df_t.empty else pd.DataFrame(columns=['Anno', 'Mese', 'Prezzo'])
     if not df_t_clean.empty:
         if 'Anno' not in df_t_clean.columns: df_t_clean['Anno'] = ANNO_CORRENTE
         df_t_clean['Anno'] = pd.to_numeric(df_t_clean['Anno'], errors='coerce').fillna(0).astype(int).astype(str)
 
-    # 4. Merge (Incrocio dati)
+    # 4. Merge
     df_m = pd.merge(df_r, df_t_clean, on=['Mese', 'Anno'], how='left')
     df_m = pd.merge(df_m, df_c_clean, on='Anno', how='left')
     
-    # 5. Calcoli Energetici
+    # 5. Calcoli
     df_m['Prezzo_Luce'] = pd.to_numeric(df_m['Prezzo'], errors='coerce').fillna(0)
     df_m['Prezzo_Benza'] = pd.to_numeric(df_m['Prezzo_Benzina'], errors='coerce').fillna(1.85)
     df_m['kWh'] = pd.to_numeric(df_m['kWh'], errors='coerce').fillna(0)
     
-    RESA_EV = 6.9       # km/kWh
-    RESA_BENZA = 14.0   # km/L
+    RESA_EV = 6.9       
+    RESA_BENZA = 14.0   
     
     df_m['Spesa_EV'] = df_m['kWh'] * df_m['Prezzo_Luce']
     df_m['Spesa_Benza_Eq'] = (df_m['kWh'] * RESA_EV / RESA_BENZA) * df_m['Prezzo_Benza']
@@ -78,7 +78,7 @@ def compute_analytics(df_r, df_t, df_c):
     
     return df_m
 
-# --- MAIN LOOP ---
+# --- ESECUZIONE ---
 df_ricariche, df_tariffe, df_config = fetch_raw_data()
 df_all = compute_analytics(df_ricariche, df_tariffe, df_config)
 
@@ -92,11 +92,21 @@ with tab1:
     
     with st.container(border=True):
         col_inp, col_dummy = st.columns([2,1])
-        kwh_in = col_inp.number_input(f"Inserisci kWh", min_value=0.0, step=0.1, value=None, placeholder="0.0")
+        
+        # --- MODIFICA QUI: value=None rende il campo vuoto ---
+        kwh_in = col_inp.number_input(
+            f"Inserisci kWh", 
+            min_value=0.0, 
+            step=0.1, 
+            value=None,          # <--- Questa è la chiave: campo vuoto all'avvio
+            placeholder="0.0"    # Testo fantasma
+        )
+        
         col_reg, col_del = st.columns(2)
         
         if col_reg.button("REGISTRA", use_container_width=True, type="primary"):
-            if kwh_in:
+            # Verifica che l'utente abbia scritto qualcosa (kwh_in non è None)
+            if kwh_in is not None and kwh_in > 0:
                 nuova_r = pd.DataFrame([{
                     "Data": OGGI.strftime("%Y-%m-%d"), 
                     "kWh": kwh_in, 
@@ -106,6 +116,8 @@ with tab1:
                 conn.update(worksheet="Ricariche", data=df_invio)
                 st.cache_data.clear()
                 st.rerun()
+            elif kwh_in is None:
+                st.toast("⚠️ Inserisci un valore prima di registrare!")
 
         if col_del.button("🗑️ ELIMINA ULTIMA", use_container_width=True):
             if not df_ricariche.empty:
@@ -171,7 +183,7 @@ with tab2:
             st.cache_data.clear()
             st.rerun()
 
-    # --- CONFIG TARIFFE LUCE (Con mese_num) ---
+    # --- CONFIG TARIFFE LUCE ---
     with st.expander("📅 Tariffa Luce"):
         c1, c2 = st.columns(2)
         t_anno = c1.selectbox("Anno", [str(y) for y in range(2024, 2031)], index=2, key="t_a")
@@ -180,19 +192,14 @@ with tab2:
         
         if st.button("Salva Tariffa"):
             df_t_temp = df_tariffe.copy()
-            
-            # 1. Normalizzazione Anno
             if 'Anno' not in df_t_temp.columns: df_t_temp['Anno'] = ""
             df_t_temp['Anno'] = pd.to_numeric(df_t_temp['Anno'], errors='coerce').fillna(0).astype(int).astype(str)
             
-            # 2. Rimozione vecchia voce per evitare duplicati
             mask = (df_t_temp['Mese'] == t_mese) & (df_t_temp['Anno'] == str(t_anno))
             df_filtered_t = df_t_temp[~mask]
             
-            # 3. Calcolo mese_num (Gennaio=1, ecc.)
             num_mese = mesi_ita.index(t_mese) + 1
             
-            # 4. Creazione nuova riga COMPLETA
             new_tariffa = pd.DataFrame([{
                 "Mese": t_mese, 
                 "Anno": str(t_anno), 
@@ -200,10 +207,8 @@ with tab2:
                 "mese_num": num_mese 
             }])
             
-            # 5. Unione e Ordinamento (Anno decrescente, Mese crescente)
             df_final_t = pd.concat([df_filtered_t, new_tariffa], ignore_index=True)
             
-            # Ordinamento intelligente per mantenere il foglio Excel pulito
             if 'mese_num' in df_final_t.columns:
                  df_final_t = df_final_t.sort_values(by=['Anno', 'mese_num'], ascending=[False, True])
             
