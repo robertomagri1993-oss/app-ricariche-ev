@@ -11,6 +11,9 @@ st.set_page_config(page_title="Tesla Manager", page_icon="⚡", layout="wide")
 # ==========================================
 # 🍪 GESTIONE LOGIN (COOKIE PERSISTENTI)
 # ==========================================
+# ==========================================
+# 🍪 GESTIONE LOGIN (UTENTE + PASSWORD)
+# ==========================================
 def login_manager():
     # CSS per centrare il login
     st.markdown(
@@ -22,40 +25,47 @@ def login_manager():
     cookie_manager = stx.CookieManager()
     
     # Nome del cookie nel browser
-    cookie_name = "tesla_manager_auth_v1"
+    cookie_name = "tesla_manager_auth_v2" # Ho cambiato nome (v2) così resetta i vecchi accessi
     
-    # 1. Tenta di leggere il cookie (richiede un attimo di tempo)
+    # 1. Tenta di leggere il cookie
     cookie_value = cookie_manager.get(cookie=cookie_name)
     
-    # 2. Se il cookie corrisponde alla password segreta -> ACCESSO
+    # 2. Se il cookie contiene la password corretta -> ACCESSO
+    # (Non serve salvare lo username nel cookie, la password basta come token di sessione)
     if cookie_value == st.secrets["PASSWORD"]:
-        # Ripristina allineamento standard della pagina dopo il login
         st.markdown(
             """<style>.stApp {align-items: unset; justify-content: unset;}</style>""", 
             unsafe_allow_html=True
         )
         return True
     
-    # 3. Altrimenti mostra Form di Login
+    # 3. Altrimenti mostra Form di Login COMPLETO
     st.title("🔒 Area Riservata")
     
-    # Form per evitare reload a ogni tasto premuto
     with st.form("login_form"):
+        # --- NUOVO CAMPO UTENTE ---
+        username_input = st.text_input("Nome Utente")
         password_input = st.text_input("Password", type="password")
+        
         submit_btn = st.form_submit_button("Accedi")
         
         if submit_btn:
-            if password_input == st.secrets["PASSWORD"]:
-                # Salva cookie per 30 giorni
+            # CONTROLLA SIA UTENTE CHE PASSWORD
+            user_ok = username_input == st.secrets["USERNAME"]
+            pass_ok = password_input == st.secrets["PASSWORD"]
+            
+            if user_ok and pass_ok:
+                # Salva cookie per 30 giorni (salviamo solo la password come "token")
                 expires = datetime.now() + timedelta(days=30)
                 cookie_manager.set(cookie_name, password_input, expires_at=expires)
-                st.success("Accesso eseguito! Ricaricamento...")
+                st.success(f"Benvenuto {username_input}! Caricamento...")
                 time.sleep(1)
                 st.rerun()
             else:
-                st.error("Password errata")
+                st.error("Utente o Password errati")
     
     return False
+
 
 # --- BLOCCO DI SICUREZZA ---
 # Se non loggato, ferma l'esecuzione qui.
