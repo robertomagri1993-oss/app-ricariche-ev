@@ -5,13 +5,10 @@ import time
 from streamlit_gsheets import GSheetsConnection
 import extra_streamlit_components as stx
 
-# --- 1. DEFINIZIONE LOGO ---
-URL_LOGO = "https://raw.githubusercontent.com/dredgen23/app-ricariche-ev/main/domohome.png" 
-
-# --- 2. CONFIGURAZIONE PAGINA ---
+# --- CONFIGURAZIONE PAGINA (SEMPLICE E STABILE) ---
 st.set_page_config(
     page_title="Tesla Manager", 
-    page_icon=URL_LOGO, 
+    page_icon="⚡", 
     layout="wide"
 )
 
@@ -25,16 +22,12 @@ def login_manager():
         unsafe_allow_html=True
     )
     
-    # Inizializza gestore cookie
     cookie_manager = stx.CookieManager()
-    
-    # Nome del cookie nel browser
     cookie_name = "tesla_manager_auth_v2"
     
-    # 1. Tenta di leggere il cookie
+    time.sleep(0.1) # Breve pausa tecnica per lettura cookie
     cookie_value = cookie_manager.get(cookie=cookie_name)
     
-    # 2. Se il cookie contiene la password corretta -> ACCESSO
     if cookie_value == st.secrets["PASSWORD"]:
         # Ripristina layout standard
         st.markdown(
@@ -43,13 +36,11 @@ def login_manager():
         )
         return True
     
-    # 3. Altrimenti mostra Form di Login
     st.title("🔒 Area Riservata")
     
     with st.form("login_form"):
         username_input = st.text_input("Nome Utente")
         password_input = st.text_input("Password", type="password")
-        
         submit_btn = st.form_submit_button("Accedi")
         
         if submit_btn:
@@ -59,11 +50,11 @@ def login_manager():
             if user_ok and pass_ok:
                 expires = datetime.now() + timedelta(days=30)
                 cookie_manager.set(cookie_name, password_input, expires_at=expires)
-                st.success(f"Benvenuto {username_input}! Caricamento...")
+                st.success(f"Benvenuto {username_input}!")
                 time.sleep(1)
                 st.rerun()
             else:
-                st.error("Utente o Password errati")
+                st.error("Dati errati")
     
     return False
 
@@ -76,20 +67,15 @@ if not login_manager():
 # 🚀 APP VERA E PROPRIA
 # ==========================================
 
-# --- INIEZIONE ICONE MOBILE & CSS ---
+# --- CSS BASE (SOLO PER NASCONDERE MENU STREAMLIT) ---
 st.markdown(
-    f"""
-    <head>
-        <link rel="apple-touch-icon" href="{URL_LOGO}">
-        <link rel="apple-touch-icon" sizes="180x180" href="{URL_LOGO}">
-        <link rel="icon" type="image/png" href="{URL_LOGO}">
-    </head>
+    """
     <style>
-        #MainMenu {{visibility: hidden;}}
-        footer {{visibility: hidden;}}
-        header {{visibility: hidden;}}
-        .stAppDeployButton {{display:none;}}
-        .stApp {{max-width: 100%; padding-top: 1rem;}}
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        header {visibility: hidden;}
+        .stAppDeployButton {display:none;}
+        .stApp {max-width: 100%; padding-top: 1rem;}
     </style>
     """,
     unsafe_allow_html=True
@@ -268,7 +254,6 @@ with tab2:
             
             df_final_t = pd.concat([df_filtered_t, new_tariffa], ignore_index=True)
             
-            # Ordinamento e salvataggio
             if 'mese_num' in df_final_t.columns:
                  df_final_t = df_final_t.sort_values(by=['Anno', 'mese_num'], ascending=[False, True])
             
