@@ -165,8 +165,8 @@ with tab2:
     st.divider()
     st.header("⚙️ Impostazioni")
     
-    # --- PRIMA LE TARIFFE LUCE ---
-    with st.expander("📅 Tariffa Luce", expanded=True): # expanded=True lo tiene aperto se preferisci
+    # --- PRIMA LE TARIFFE LUCE (CHIUSO DI DEFAULT) ---
+    with st.expander("📅 Tariffa Luce"): # RIMOSSO expanded=True
         c1, c2 = st.columns(2)
         t_anno = c1.selectbox("Anno", [str(y) for y in range(2024, 2031)], index=2, key="t_a")
         t_mese = c2.selectbox("Mese", mesi_ita, key="t_m")
@@ -200,7 +200,7 @@ with tab2:
             time.sleep(1)
             st.rerun()
 
-    # --- POI LA BENZINA ---
+    # --- POI LA BENZINA (CHIUSO DI DEFAULT) ---
     with st.expander("⛽ Prezzo Benzina"):
         col_a, col_p = st.columns(2)
         tg_year = col_a.selectbox("Anno", [str(y) for y in range(2024, 2031)], index=2)
