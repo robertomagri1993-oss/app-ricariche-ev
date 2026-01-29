@@ -173,7 +173,7 @@ with tab1:
         
         col_reg, col_del = st.columns(2)
         
-        if col_reg.button("REGISTRA", use_container_width=True, type="primary"):
+        if col_reg.button("✅ REGISTRA", use_container_width=True, type="primary"):
             if kwh_in is not None and kwh_in > 0:
                 nuova_r = pd.DataFrame([{
                     "Data": OGGI.strftime("%Y-%m-%d"), 
