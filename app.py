@@ -1,11 +1,71 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 from streamlit_gsheets import GSheetsConnection
+import extra_streamlit_components as stx
 
 # --- CONFIGURAZIONE PAGINA ---
 st.set_page_config(page_title="Tesla Manager", page_icon="⚡", layout="wide")
+
+# ==========================================
+# 🍪 GESTIONE LOGIN (COOKIE PERSISTENTI)
+# ==========================================
+def login_manager():
+    # CSS per centrare il login
+    st.markdown(
+        """<style>.stApp {align-items: center; justify-content: center;}</style>""", 
+        unsafe_allow_html=True
+    )
+    
+    # Inizializza gestore cookie
+    cookie_manager = stx.CookieManager()
+    
+    # Nome del cookie nel browser
+    cookie_name = "tesla_manager_auth_v1"
+    
+    # 1. Tenta di leggere il cookie (richiede un attimo di tempo)
+    cookie_value = cookie_manager.get(cookie=cookie_name)
+    
+    # 2. Se il cookie corrisponde alla password segreta -> ACCESSO
+    if cookie_value == st.secrets["PASSWORD"]:
+        # Ripristina allineamento standard della pagina dopo il login
+        st.markdown(
+            """<style>.stApp {align-items: unset; justify-content: unset;}</style>""", 
+            unsafe_allow_html=True
+        )
+        return True
+    
+    # 3. Altrimenti mostra Form di Login
+    st.title("🔒 Area Riservata")
+    
+    # Form per evitare reload a ogni tasto premuto
+    with st.form("login_form"):
+        password_input = st.text_input("Password", type="password")
+        submit_btn = st.form_submit_button("Accedi")
+        
+        if submit_btn:
+            if password_input == st.secrets["PASSWORD"]:
+                # Salva cookie per 30 giorni
+                expires = datetime.now() + timedelta(days=30)
+                cookie_manager.set(cookie_name, password_input, expires_at=expires)
+                st.success("Accesso eseguito! Ricaricamento...")
+                time.sleep(1)
+                st.rerun()
+            else:
+                st.error("Password errata")
+    
+    return False
+
+# --- BLOCCO DI SICUREZZA ---
+# Se non loggato, ferma l'esecuzione qui.
+if not login_manager():
+    st.stop()
+
+
+# ==========================================
+# 🚀 APP VERA E PROPRIA
+# ==========================================
 
 # --- CSS E LOGO ---
 URL_LOGO_PERSONALIZZATO = "https://i.postimg.cc/Y0n1BpM2/domohome.png" 
@@ -44,7 +104,7 @@ def fetch_raw_data():
 def compute_analytics(df_r, df_t, df_c):
     if df_r is None or df_r.empty: return pd.DataFrame()
     
-    # 1. Preparazione Ricariche
+    # 1. Ricariche
     df_r = df_r.copy()
     df_r['Data'] = pd.to_datetime(df_r['Data'])
     df_r['Anno'] = df_r['Data'].dt.year.astype(str)
@@ -93,7 +153,6 @@ with tab1:
     with st.container(border=True):
         col_inp, col_dummy = st.columns([2,1])
         
-        # Campo vuoto all'avvio (value=None)
         kwh_in = col_inp.number_input(
             f"Inserisci kWh", 
             min_value=0.0, 
@@ -165,8 +224,8 @@ with tab2:
     st.divider()
     st.header("⚙️ Impostazioni")
     
-    # --- PRIMA LE TARIFFE LUCE (CHIUSO DI DEFAULT) ---
-    with st.expander("📅 Tariffa Luce"): # RIMOSSO expanded=True
+    # --- TARIFFE LUCE ---
+    with st.expander("📅 Tariffa Luce"):
         c1, c2 = st.columns(2)
         t_anno = c1.selectbox("Anno", [str(y) for y in range(2024, 2031)], index=2, key="t_a")
         t_mese = c2.selectbox("Mese", mesi_ita, key="t_m")
@@ -200,7 +259,7 @@ with tab2:
             time.sleep(1)
             st.rerun()
 
-    # --- POI LA BENZINA (CHIUSO DI DEFAULT) ---
+    # --- BENZINA ---
     with st.expander("⛽ Prezzo Benzina"):
         col_a, col_p = st.columns(2)
         tg_year = col_a.selectbox("Anno", [str(y) for y in range(2024, 2031)], index=2)
