@@ -55,14 +55,28 @@ tab1, tab2 = st.tabs(["🏠 Home", "📊 Storico & Config"])
 # --- TAB 1: HOME ---
 with tab1:
     st.title(f"⚡ Tesla Manager {ANNO_CORRENTE}")
+    
+    # Sezione Registrazione
     with st.container(border=True):
         kwh_in = st.number_input(f"Inserisci kWh ricaricati", min_value=0.0, step=0.1, value=None, placeholder="kWh...")
-        if st.button("REGISTRA", use_container_width=True, type="primary"):
+        col_reg, col_del = st.columns([3, 1])
+        
+        if col_reg.button("REGISTRA", use_container_width=True, type="primary"):
             if kwh_in:
                 nuova_r = pd.DataFrame([{"Data": OGGI.strftime("%Y-%m-%d"), "kWh": kwh_in, "Mese": MESE_CORRENTE}])
                 df_invio = pd.concat([df_ricariche, nuova_r], ignore_index=True)
                 conn.update(worksheet="Ricariche", data=df_invio)
                 st.cache_data.clear()
+                st.rerun()
+
+        # Funzione per eliminare l'ultima riga in caso di errore
+        if col_del.button("🗑️ ELIMINA ULTIMA", use_container_width=True, help="Elimina l'ultima ricarica inserita"):
+            if not df_ricariche.empty:
+                df_rimosso = df_ricariche.drop(df_ricariche.index[-1])
+                conn.update(worksheet="Ricariche", data=df_rimosso)
+                st.cache_data.clear()
+                st.warning("Ultima ricarica eliminata.")
+                time.sleep(1)
                 st.rerun()
 
     if not df_all.empty:
