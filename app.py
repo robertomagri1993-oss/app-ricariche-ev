@@ -56,10 +56,9 @@ tab1, tab2 = st.tabs(["🏠 Home", "📊 Storico & Config"])
 with tab1:
     st.title(f"⚡ Tesla Manager {ANNO_CORRENTE}")
     
-    # Sezione Registrazione
     with st.container(border=True):
         kwh_in = st.number_input(f"Inserisci kWh ricaricati", min_value=0.0, step=0.1, value=None, placeholder="kWh...")
-        col_reg, col_del = st.columns([3, 1])
+        col_reg, col_del = st.columns(2)
         
         if col_reg.button("REGISTRA", use_container_width=True, type="primary"):
             if kwh_in:
@@ -69,8 +68,7 @@ with tab1:
                 st.cache_data.clear()
                 st.rerun()
 
-        # Funzione per eliminare l'ultima riga in caso di errore
-        if col_del.button("🗑️ ELIMINA ULTIMA", use_container_width=True, help="Elimina l'ultima ricarica inserita"):
+        if col_del.button("🗑️ ELIMINA ULTIMA", use_container_width=True):
             if not df_ricariche.empty:
                 df_rimosso = df_ricariche.drop(df_ricariche.index[-1])
                 conn.update(worksheet="Ricariche", data=df_rimosso)
@@ -103,6 +101,13 @@ with tab2:
                 m1, m2 = st.columns(2)
                 m1.metric(f"Energia {mese_ricerca}", f"{df_mirato['kWh'].sum():.1f} kWh")
                 m2.metric(f"Spesa {mese_ricerca}", f"{df_mirato['Spesa_EV'].sum():.2f} €")
+                
+                # --- AGGIUNTA: Storico Ricariche del Mese ---
+                st.write(f"**Dettaglio ricariche di {mese_ricerca} {anno_ricerca}:**")
+                # Formattiamo la data per una lettura più pulita
+                df_display = df_mirato[['Data', 'kWh']].copy()
+                df_display['Data'] = df_display['Data'].dt.strftime('%d/%m/%Y')
+                st.dataframe(df_display.sort_index(ascending=False), use_container_width=True, hide_index=True)
             else:
                 st.warning(f"Nessuna ricarica registrata per {mese_ricerca} {anno_ricerca}")
 
