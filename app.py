@@ -10,7 +10,7 @@ st.set_page_config(page_title="Tesla Manager", page_icon="⚡", layout="wide")
 
 # --- PERSONALIZZAZIONE LOGO IPHONE (APPLE TOUCH ICON) ---
 # INCOLLA IL LINK DEL TUO LOGO DOVE C'È "IL_TUO_LINK_QUI"
-URL_LOGO_PERSONALIZZATO = "<a href='https://postimg.cc/4HcKzRYj' target='_blank'><img src='https://i.postimg.cc/4HcKzRYj/domohome.png' border='0' alt='domohome'></a>" 
+URL_LOGO_PERSONALIZZATO = "https://i.postimg.cc/Y0n1BpM2/domohome.png" 
 
 st.markdown(
     f"""
