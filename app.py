@@ -4,8 +4,21 @@ from datetime import datetime
 import time
 from streamlit_gsheets import GSheetsConnection
 
-# --- CONFIGURAZIONE ---
+# --- CONFIGURAZIONE PAGINA ---
 st.set_page_config(page_title="Tesla Model 3 Manager", page_icon="⚡", layout="wide")
+
+# --- CSS PER NASCONDERE IL BRANDING STREAMLIT ---
+hide_st_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            header {visibility: hidden;}
+            .stAppDeployButton {display:none;}
+            </style>
+            """
+st.markdown(hide_st_style, unsafe_allow_html=True)
+
+# --- CONNESSIONE DATABASE ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def load_data():
@@ -93,7 +106,6 @@ with tab2:
         anno_ricerca = col_sel_anno.selectbox("Seleziona Anno", anni_disp, key="sel_anno_search")
         mese_ricerca = col_sel_mese.selectbox("Seleziona Mese", mesi_ita, key="sel_mese_search")
 
-        # Filtro mirato
         df_mirato = df_all[(df_all['Anno'] == anno_ricerca) & (df_all['Mese'] == mese_ricerca)]
         
         with st.container(border=True):
@@ -102,9 +114,7 @@ with tab2:
                 m1.metric(f"Energia {mese_ricerca}", f"{df_mirato['kWh'].sum():.1f} kWh")
                 m2.metric(f"Spesa {mese_ricerca}", f"{df_mirato['Spesa_EV'].sum():.2f} €")
                 
-                # --- AGGIUNTA: Storico Ricariche del Mese ---
                 st.write(f"**Dettaglio ricariche di {mese_ricerca} {anno_ricerca}:**")
-                # Formattiamo la data per una lettura più pulita
                 df_display = df_mirato[['Data', 'kWh']].copy()
                 df_display['Data'] = df_display['Data'].dt.strftime('%d/%m/%Y')
                 st.dataframe(df_display.sort_index(ascending=False), use_container_width=True, hide_index=True)
