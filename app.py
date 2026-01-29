@@ -6,7 +6,7 @@ from streamlit_gsheets import GSheetsConnection
 import extra_streamlit_components as stx
 
 # --- 1. DEFINIZIONE LOGO ---
-URL_LOGO = "https://i.postimg.cc/Y0n1BpM2/domohome.png" 
+URL_LOGO = "https://raw.githubusercontent.com/dredgen23/app-ricariche-ev/main/domohome.png" 
 
 # --- 2. CONFIGURAZIONE PAGINA ---
 st.set_page_config(
