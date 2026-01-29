@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import time
+from streamlit_gsheets import GSheetsConnection  # <--- RIGA AGGIUNTA
 
 # --- CONFIGURAZIONE PAGINA ---
 st.set_page_config(page_title="EV Savings Tracker", page_icon="💰", layout="centered")
