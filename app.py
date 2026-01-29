@@ -5,7 +5,7 @@ import time
 from streamlit_gsheets import GSheetsConnection
 
 # --- CONFIGURAZIONE PAGINA ---
-st.set_page_config(page_title="EV Quick Manager", page_icon="⚡", layout="centered")
+st.set_page_config(page_title="EV Quick Manager", page_icon="⚡", layout="wide") # Layout wide per le metriche affiancate
 
 # --- CONNESSIONE DATABASE ---
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -19,19 +19,18 @@ df_ricariche, df_tariffe = load_data()
 mesi_ita = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", 
             "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]
 
-# --- COSTANTI FISSE 2026 ---
+# --- COSTANTI FISSE ---
 RESA_EV = 6.9      
 RESA_BENZA = 14.0  
-ANNO_CORRENTE = 2026
+ANNO_CORRENTE = datetime.now().year
 
-# --- FUNZIONE PREZZO BENZINA (SILENZIOSA) ---
+# --- FUNZIONE PREZZO BENZINA (5 secondi di timeout) ---
 @st.cache_data(ttl=86400)
 def get_prezzo_benzina_bg():
-    # Timeout ridottissimo (1s) per non bloccare l'interfaccia
     try:
         url = "https://www.mise.gov.it"
-        df_b = pd.read_csv(url, sep=";", skiprows=1, encoding='latin-1', storage_options={'timeout': 1})
-        prezzo_str = df_b[df_b.iloc[:,0].str.contains("Benzina", na=False)].iloc[0, 1]
+        df_b = pd.read_csv(url, sep=";", skiprows=1, encoding='latin-1', storage_options={'timeout': 5})
+        prezzo_str = df_b[df_b.iloc[:,0].str.contains("Benzina", na=False)].iloc
         return float(prezzo_str.replace(',', '.')), True
     except:
         return 1.820, False # Prezzo backup 2026
@@ -50,13 +49,14 @@ def get_data_aggiornata(df_r, df_t):
 
 # --- ESECUZIONE ---
 df_visualizzazione = get_data_aggiornata(df_ricariche, df_tariffe)
+prezzo_benza, is_live = get_prezzo_benzina_bg()
 tab_home, tab_config = st.tabs(["🏠 Registra & Home", "⚙️ Dettagli & Tariffe"])
 
 # ==========================================
 # TAB 1: HOME (PRIORITÀ ASSOLUTA ALL'INSERIMENTO)
 # ==========================================
 with tab_home:
-    st.title(f"⚡ Model 3 Manager {ANNO_CORRENTE}")
+    st.title(f"⚡ My EV Savings {ANNO_CORRENTE}")
     
     # 1. MODULO DI REGISTRAZIONE (Sempre reattivo)
     with st.container(border=True):
@@ -73,35 +73,49 @@ with tab_home:
             time.sleep(0.5)
             st.rerun()
 
-    # 2. CALCOLO RISPARMIO (Caricato dopo o con backup)
-    prezzo_benza, is_live = get_prezzo_benzina_bg()
-    
+    # 2. METRICHE & RISPARMIO (Affiancate)
     if not df_visualizzazione.empty:
-        tot_kwh = df_visualizzazione['kWh'].sum()
+        # Dati annuali
+        tot_kwh_anno = df_visualizzazione['kWh'].sum()
         tot_spesa_ev = df_visualizzazione['Spesa'].sum()
-        km_stima = tot_kwh * RESA_EV
-        risparmio = ((km_stima / RESA_BENZA) * prezzo_benza) - tot_spesa_ev
+        km_stima = tot_kwh_anno * RESA_EV
+        risparmio_totale = ((km_stima / RESA_BENZA) * prezzo_benza) - tot_spesa_ev
 
-        st.metric(label="💰 Risparmio Accumulato", value=f"{risparmio:.2f} €")
+        # Dati mensili
+        df_mese = df_visualizzazione[df_visualizzazione['Mese'] == nome_mese_oggi]
+        kwh_mese_corrente = df_mese['kWh'].sum()
+        spesa_mese_corrente = df_mese['Spesa'].sum()
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric(label="💰 Risparmio Annuale", value=f"{risparmio_totale:.2f} €")
+        with col2:
+            st.metric(label=f"🔌 Totale kWh {nome_mese_oggi}", value=f"{kwh_mese_corrente:.1f} kWh")
+            
         st.bar_chart(df_visualizzazione.groupby('Mese')['Spesa'].sum())
 
 # ==========================================
 # TAB 2: DETTAGLI & TARIFFE
 # ==========================================
 with tab_config:
-    st.subheader("⛽ Info Benzina")
-    # Qui l'utente vede se il dato è live o meno, senza rallentare la Home
+    st.subheader("⚙️ Parametri & Info")
+    colA, colB = st.columns(2)
+    with colA:
+        st.metric("Tua Efficienza EV", f"{RESA_EV} km/kWh")
+    with colB:
+        st.metric("Auto Benzina Eq.", f"{RESA_BENZA} km/L")
+        
     if is_live:
-        st.success(f"Dato Ministeriale: {prezzo_benza:.3f} €/L")
+        st.success(f"✅ Prezzo Benzina Live: {prezzo_benza:.3f} €/L")
     else:
-        st.info(f"Dato di Backup: {prezzo_benza:.3f} €/L (Ministero non raggiungibile)")
+        st.info(f"ℹ️ Prezzo Benzina (Backup): {prezzo_benza:.3f} €/L")
 
     st.divider()
     st.subheader("📅 Tariffe Mensili")
-    m_sel = st.selectbox("Mese", mesi_ita)
+    m_sel = st.selectbox("Seleziona Mese", mesi_ita)
     p_sel = st.number_input("Prezzo kWh (€)", min_value=0.0, step=0.01, format="%.2f")
     
-    if st.button("Salva Tariffa", use_container_width=True):
+    if st.button("Salva Tariffa Mese", use_container_width=True):
         nuova_t = pd.DataFrame([{"Mese": m_sel, "Prezzo": p_sel}])
         df_t_final = pd.concat([df_tariffe[df_tariffe['Mese'] != m_sel], nuova_t], ignore_index=True)
         conn.update(worksheet="Tariffe", data=df_t_final)
