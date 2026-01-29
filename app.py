@@ -5,12 +5,16 @@ import time
 from streamlit_gsheets import GSheetsConnection
 import extra_streamlit_components as stx
 
-# --- CONFIGURAZIONE PAGINA ---
-st.set_page_config(page_title="Tesla Manager", page_icon="⚡", layout="wide")
+# --- 1. DEFINIZIONE LOGO ---
+URL_LOGO = "https://i.postimg.cc/Y0n1BpM2/domohome.png" 
 
-# ==========================================
-# 🍪 GESTIONE LOGIN (COOKIE PERSISTENTI)
-# ==========================================
+# --- 2. CONFIGURAZIONE PAGINA ---
+st.set_page_config(
+    page_title="Tesla Manager", 
+    page_icon=URL_LOGO, 
+    layout="wide"
+)
+
 # ==========================================
 # 🍪 GESTIONE LOGIN (UTENTE + PASSWORD)
 # ==========================================
@@ -25,37 +29,34 @@ def login_manager():
     cookie_manager = stx.CookieManager()
     
     # Nome del cookie nel browser
-    cookie_name = "tesla_manager_auth_v2" # Ho cambiato nome (v2) così resetta i vecchi accessi
+    cookie_name = "tesla_manager_auth_v2"
     
     # 1. Tenta di leggere il cookie
     cookie_value = cookie_manager.get(cookie=cookie_name)
     
     # 2. Se il cookie contiene la password corretta -> ACCESSO
-    # (Non serve salvare lo username nel cookie, la password basta come token di sessione)
     if cookie_value == st.secrets["PASSWORD"]:
+        # Ripristina layout standard
         st.markdown(
             """<style>.stApp {align-items: unset; justify-content: unset;}</style>""", 
             unsafe_allow_html=True
         )
         return True
     
-    # 3. Altrimenti mostra Form di Login COMPLETO
+    # 3. Altrimenti mostra Form di Login
     st.title("🔒 Area Riservata")
     
     with st.form("login_form"):
-        # --- NUOVO CAMPO UTENTE ---
         username_input = st.text_input("Nome Utente")
         password_input = st.text_input("Password", type="password")
         
         submit_btn = st.form_submit_button("Accedi")
         
         if submit_btn:
-            # CONTROLLA SIA UTENTE CHE PASSWORD
             user_ok = username_input == st.secrets["USERNAME"]
             pass_ok = password_input == st.secrets["PASSWORD"]
             
             if user_ok and pass_ok:
-                # Salva cookie per 30 giorni (salviamo solo la password come "token")
                 expires = datetime.now() + timedelta(days=30)
                 cookie_manager.set(cookie_name, password_input, expires_at=expires)
                 st.success(f"Benvenuto {username_input}! Caricamento...")
@@ -66,9 +67,7 @@ def login_manager():
     
     return False
 
-
 # --- BLOCCO DI SICUREZZA ---
-# Se non loggato, ferma l'esecuzione qui.
 if not login_manager():
     st.stop()
 
@@ -77,15 +76,24 @@ if not login_manager():
 # 🚀 APP VERA E PROPRIA
 # ==========================================
 
-# --- CSS E LOGO ---
-URL_LOGO_PERSONALIZZATO = "https://i.postimg.cc/Y0n1BpM2/domohome.png" 
-st.markdown(f"""
-    <head><link rel="apple-touch-icon" href="{URL_LOGO_PERSONALIZZATO}"></head>
+# --- INIEZIONE ICONE MOBILE & CSS ---
+st.markdown(
+    f"""
+    <head>
+        <link rel="apple-touch-icon" href="{URL_LOGO}">
+        <link rel="apple-touch-icon" sizes="180x180" href="{URL_LOGO}">
+        <link rel="icon" type="image/png" href="{URL_LOGO}">
+    </head>
     <style>
-        #MainMenu, footer, header, .stAppDeployButton {{visibility: hidden;}}
+        #MainMenu {{visibility: hidden;}}
+        footer {{visibility: hidden;}}
+        header {{visibility: hidden;}}
+        .stAppDeployButton {{display:none;}}
         .stApp {{max-width: 100%; padding-top: 1rem;}}
     </style>
-    """, unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True
+)
 
 # --- CONNESSIONE DATABASE ---
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -260,6 +268,7 @@ with tab2:
             
             df_final_t = pd.concat([df_filtered_t, new_tariffa], ignore_index=True)
             
+            # Ordinamento e salvataggio
             if 'mese_num' in df_final_t.columns:
                  df_final_t = df_final_t.sort_values(by=['Anno', 'mese_num'], ascending=[False, True])
             
