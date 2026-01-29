@@ -25,36 +25,28 @@ OGGI = datetime.now()
 ANNO_CORRENTE = str(OGGI.year)
 MESE_CORRENTE = mesi_ita[OGGI.month - 1]
 
-# --- LOGICA CALCOLI ---
+# --- LOGICA CALCOLI (Versione Blindata Multi-Anno) ---
 def get_data_full(df_r, df_t, df_c):
     if df_r is None or df_r.empty: return pd.DataFrame()
     df_r = df_r.copy()
     df_r['Data'] = pd.to_datetime(df_r['Data'])
     df_r['Anno'] = df_r['Data'].dt.year.astype(str)
     
-    # Pulizia Config Anno
-    df_c_clean = df_c.copy() if df_c is not None and not df_c.empty else pd.DataFrame(columns=['Anno', 'Prezzo_Benzina'])
-    if not df_c_clean.empty:
-        df_c_clean['Anno'] = df_c_clean['Anno'].apply(lambda x: str(int(float(x))) if str(x).replace('.','').isdigit() else str(x))
+    # Pulizia Anno in Config per evitare errori di merge
+    df_c_c = df_c.copy() if df_c is not None and not df_c.empty else pd.DataFrame(columns=['Anno', 'Prezzo_Benzina'])
+    if not df_c_c.empty:
+        df_c_c['Anno'] = df_c_c['Anno'].apply(lambda x: str(int(float(x))) if str(x).replace('.','').isdigit() else str(x))
     
-    # Merge con Tariffe Luce (per ricariche Casa) e Config Benzina
+    # Merge Dati
     df_m = pd.merge(df_r, df_t, on='Mese', how='left')
-    df_m = pd.merge(df_m, df_c_clean, on='Anno', how='left')
+    df_m = pd.merge(df_m, df_c_c, on='Anno', how='left')
     
-    # Logica Prezzi Dinamica
-    df_m['Prezzo_Luce_Mese'] = pd.to_numeric(df_m['Prezzo'], errors='coerce').fillna(0)
+    # Conversione e Calcoli
+    df_m['Prezzo_Luce'] = pd.to_numeric(df_m['Prezzo'], errors='coerce').fillna(0)
     df_m['Prezzo_Benza'] = pd.to_numeric(df_m['Prezzo_Benzina'], errors='coerce').fillna(1.85)
     df_m['kWh'] = pd.to_numeric(df_m['kWh'], errors='coerce').fillna(0)
     
-    # CALCOLO SPESA EFFETTIVA: 
-    # Se 'Tipo' è Casa usa tariffa mese, altrimenti usa il valore già presente in 'Spesa_Diretta'
-    def calcola_spesa(row):
-        if row['Tipo'] == 'Casa':
-            return row['kWh'] * row['Prezzo_Luce_Mese']
-        else:
-            return pd.to_numeric(row.get('Spesa_Diretta', 0), errors='coerce')
-
-    df_m['Spesa_EV'] = df_m.apply(calcola_spesa, axis=1)
+    df_m['Spesa_EV'] = df_m['kWh'] * df_m['Prezzo_Luce']
     df_m['Spesa_Benza_Eq'] = (df_m['kWh'] * RESA_EV / RESA_BENZA) * df_m['Prezzo_Benza']
     df_m['Risparmio'] = df_m['Spesa_Benza_Eq'] - df_m['Spesa_EV']
     return df_m
@@ -63,31 +55,23 @@ df_all = get_data_full(df_ricariche, df_tariffe, df_config)
 
 tab1, tab2 = st.tabs(["🏠 Home", "📊 Storico & Config"])
 
-# --- TAB 1: HOME ---
+# ==========================================
+# TAB 1: HOME
+# ==========================================
 with tab1:
     st.title(f"⚡ Tesla Manager {ANNO_CORRENTE}")
+    
     with st.container(border=True):
-        col_tipo, col_kwh = st.columns(2)
-        tipo_ric = col_tipo.radio("Dove hai caricato?", ["Casa", "Colonnina"], horizontal=True)
-        kwh_in = col_kwh.number_input("kWh ricaricati", min_value=0.0, step=0.1, value=None, placeholder="kWh...")
+        # Campo vuoto all'avvio
+        kwh_in = st.number_input(f"Inserisci kWh ricaricati", min_value=0.0, step=0.1, value=None, placeholder="Scrivi qui...")
         
-        spesa_diretta = 0.0
-        if tipo_ric == "Colonnina":
-            spesa_diretta = st.number_input("Quanto hai pagato in totale? (€)", min_value=0.0, step=0.1, format="%.2f")
-
         if st.button("REGISTRA", use_container_width=True, type="primary"):
             if kwh_in:
-                nuova_r = pd.DataFrame([{
-                    "Data": OGGI.strftime("%Y-%m-%d"), 
-                    "kWh": kwh_in, 
-                    "Mese": MESE_CORRENTE,
-                    "Tipo": tipo_ric,
-                    "Spesa_Diretta": spesa_diretta if tipo_ric == "Colonnina" else 0
-                }])
+                nuova_r = pd.DataFrame([{"Data": OGGI.strftime("%Y-%m-%d"), "kWh": kwh_in, "Mese": MESE_CORRENTE}])
                 df_invio = pd.concat([df_ricariche, nuova_r], ignore_index=True)
                 conn.update(worksheet="Ricariche", data=df_invio)
                 st.cache_data.clear()
-                st.success(f"Registrata ricarica {tipo_ric}!")
+                st.success("Registrato!")
                 time.sleep(0.5)
                 st.rerun()
 
@@ -97,54 +81,54 @@ with tab1:
         c1.metric(f"💰 Risparmio {ANNO_CORRENTE}", f"{df_curr['Risparmio'].sum():.2f} €")
         c2.metric(f"🔌 kWh {MESE_CORRENTE}", f"{df_curr[df_curr['Mese'] == MESE_CORRENTE]['kWh'].sum():.1f}")
         
-        # Grafico spesa diviso per Tipo
-        st.subheader("Distribuzione Spesa Mensile (€)")
-        chart_data = df_curr.groupby(['Mese', 'Tipo'])['Spesa_EV'].sum().unstack().fillna(0)
-        st.bar_chart(chart_data)
+        st.bar_chart(df_curr.groupby('Mese')['Spesa_EV'].sum())
 
-# --- TAB 2: STORICO & CONFIG ---
+# ==========================================
+# TAB 2: STORICO & CONFIG
+# ==========================================
 with tab2:
-    st.header("🔍 Riepilogo Mensile Mirato")
+    st.subheader("🔍 Analisi Mensile")
     if not df_all.empty:
+        col_a, col_m = st.columns(2)
         anni_disp = sorted(df_all['Anno'].unique(), reverse=True)
-        col_sel_anno, col_sel_mese = st.columns(2)
-        anno_ricerca = col_sel_anno.selectbox("Seleziona Anno", anni_disp)
-        mese_ricerca = col_sel_mese.selectbox("Seleziona Mese", mesi_ita)
+        anno_sel = col_a.selectbox("Anno", anni_disp)
+        mese_sel = col_m.selectbox("Mese", mesi_ita)
 
-        df_mirato = df_all[(df_all['Anno'] == anno_ricerca) & (df_all['Mese'] == mese_ricerca)]
+        df_mirato = df_all[(df_all['Anno'] == anno_sel) & (df_all['Mese'] == mese_sel)]
         
-        with st.container(border=True):
-            if not df_mirato.empty:
-                m1, m2, m3 = st.columns(3)
-                m1.metric("Energia", f"{df_mirato['kWh'].sum():.1f} kWh")
-                m2.metric("Spesa Effettiva", f"{df_mirato['Spesa_EV'].sum():.2f} €")
-                m3.metric("Risparmio", f"{df_mirato['Risparmio'].sum():.2f} €")
-                st.dataframe(df_mirato[['Data', 'Tipo', 'kWh', 'Spesa_EV']], use_container_width=True, hide_index=True)
-            else:
-                st.warning("Nessun dato per questo periodo")
+        if not df_mirato.empty:
+            m1, m2 = st.columns(2)
+            m1.metric("Totale Energia", f"{df_mirato['kWh'].sum():.1f} kWh")
+            m2.metric("Spesa Totale", f"{df_mirato['Spesa_EV'].sum():.2f} €")
+        else:
+            st.info("Nessun dato registrato.")
 
     st.divider()
-    st.header("⚙️ Configurazioni")
+    st.subheader("⚙️ Configurazioni")
     
-    with st.expander("⛽ Imposta Prezzo Benzina per Anno"):
-        col_a, col_p = st.columns(2)
-        target_year = col_a.selectbox("Anno", [str(y) for y in range(2024, 2031)], index=2)
-        target_price = col_p.number_input("Prezzo Medio (€/L)", value=1.85, format="%.3f")
-        if st.button("Salva Prezzo Anno"):
-            df_config_clean = df_config.copy()
-            if not df_config_clean.empty:
-                df_config_clean['Anno'] = df_config_clean['Anno'].astype(str)
-            df_f = pd.concat([df_config_clean[df_config_clean['Anno'] != str(target_year)], 
-                              pd.DataFrame([{"Anno": str(target_year), "Prezzo_Benzina": target_price}])], ignore_index=True)
-            conn.update(worksheet="Config", data=df_f)
+    # Prezzo Benzina (Sostituisce se esistente)
+    with st.expander("⛽ Prezzo Benzina per Anno"):
+        col_1, col_2 = st.columns(2)
+        a_target = col_1.selectbox("Seleziona Anno", [str(y) for y in range(2024, 2031)], index=2)
+        p_target = col_2.number_input("Prezzo Medio (€/L)", value=1.85, format="%.3f")
+        if st.button("Salva Prezzo Benzina"):
+            # Pulizia e sostituzione
+            df_c_clean = df_config.copy()
+            if not df_c_clean.empty:
+                df_c_clean['Anno'] = df_c_clean['Anno'].apply(lambda x: str(int(float(x))) if str(x).replace('.','').isdigit() else str(x))
+            df_final = pd.concat([df_c_clean[df_c_clean['Anno'] != a_target], 
+                                  pd.DataFrame([{"Anno": a_target, "Prezzo_Benzina": p_target}])], ignore_index=True)
+            conn.update(worksheet="Config", data=df_final)
             st.cache_data.clear()
             st.rerun()
 
-    with st.expander("📅 Tariffe Luce CASA (Mensili)"):
-        m_s = st.selectbox("Mese Luce", mesi_ita)
-        p_s = st.number_input("Tua Tariffa Casa (€/kWh)", min_value=0.0, step=0.01)
-        if st.button("Salva Tariffa Casa"):
-            df_t_f = pd.concat([df_tariffe[df_tariffe['Mese'] != m_s], pd.DataFrame([{"Mese": m_s, "Prezzo": p_s}])], ignore_index=True)
+    # Tariffa Luce
+    with st.expander("📅 Tariffe Luce Casa"):
+        m_s = st.selectbox("Seleziona Mese", mesi_ita)
+        p_s = st.number_input("Tariffa (€/kWh)", min_value=0.0, step=0.01)
+        if st.button("Salva Tariffa"):
+            df_t_f = pd.concat([df_tariffe[df_tariffe['Mese'] != m_s], 
+                                pd.DataFrame([{"Mese": m_s, "Prezzo": p_s}])], ignore_index=True)
             conn.update(worksheet="Tariffe", data=df_t_f)
             st.cache_data.clear()
             st.rerun()
