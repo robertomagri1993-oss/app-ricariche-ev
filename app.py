@@ -12,7 +12,9 @@ from PIL import Image
 try:
     # Carica l'immagine dal file locale per la Favicon del browser
     icona_locale = Image.open("favicon.ico")
-
+except Exception:
+    # Se non la trova, usa un'emoji per non rompere l'app
+    icona_locale = "⚡"
 # ==========================================
 # 2. ICONE AVANZATE (IPHONE + SOCIAL + MINIATURE)
 # ==========================================
