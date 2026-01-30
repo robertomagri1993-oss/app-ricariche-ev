@@ -24,21 +24,14 @@ st.set_page_config(
 st.markdown(
     f"""
     <head>
-        <!-- 1. Icona Apple Touch (iPhone/iPad Home Screen) -->
         <link rel="apple-touch-icon" href="{URL_LOGO}">
         <link rel="apple-touch-icon" sizes="180x180" href="{URL_LOGO}">
-        
-        <!-- 2. Favicon standard (Browser Tab) -->
         <link rel="icon" type="image/png" href="{URL_LOGO}">
         <link rel="shortcut icon" type="image/png" href="{URL_LOGO}">
-        
-        <!-- 3. OPEN GRAPH (Miniatura per WhatsApp, iMessage, LinkedIn) -->
         <meta property="og:title" content="Tesla Manager">
         <meta property="og:description" content="Gestione ricariche domestiche">
         <meta property="og:image" content="{URL_LOGO}">
         <meta property="og:type" content="website">
-        
-        <!-- 4. Setup Schermo Intero Mobile -->
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-title" content="Tesla Manager">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
