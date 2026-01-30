@@ -9,7 +9,7 @@ import extra_streamlit_components as stx
 # 1. CONFIGURAZIONE ICONA
 # ==========================================
 # INCOLLA QUI SOTTO IL TUO LINK DI POSTIMAGES (deve finire con .png)
-URL_LOGO = "https://raw.githubusercontent.com/dredgen23/app-ricariche-ev/main/domohome.png" 
+URL_LOGO = "https://raw.githubusercontent.com/dredgen23/app-ricariche-ev/main/favicon.ico" 
 
 # Configurazione base per il browser PC (Favicon)
 st.set_page_config(
