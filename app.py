@@ -28,7 +28,7 @@ st.markdown(
     <head>
         <link rel="apple-touch-icon" href="{URL_LOGOAPL}">
         <link rel="apple-touch-icon" sizes="180x180" href="{URL_LOGOAPL}">
-        <link rel="icon" type="image/png" href="{URL_LOGO}">
+        <link rel="icon" type="image/png" href="{URL_LOGOPAGE}">
         <link rel="shortcut icon" type="image/png" href="{URL_LOGOPAGE}">
         <meta property="og:title" content="Tesla Manager">
         <meta property="og:description" content="Gestione ricariche domestiche">
