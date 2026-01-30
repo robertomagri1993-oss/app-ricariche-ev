@@ -4,34 +4,49 @@ from datetime import datetime, timedelta
 import time
 from streamlit_gsheets import GSheetsConnection
 import extra_streamlit_components as stx
+import base64
 
 # ==========================================
-# 1. CONFIGURAZIONE ICONA
+# 1. FUNZIONE MAGICA PER L'ICONA
 # ==========================================
-# INCOLLA QUI SOTTO IL TUO LINK DI POSTIMAGES (deve finire con .png)
-URL_LOGO = "https://raw.githubusercontent.com/dredgen23/app-ricariche-ev/main/domohome.png" 
+def get_base64_icon(filepath):
+    """
+    Legge il file locale e lo trasforma in una stringa di testo
+    che i browser e l'iPhone possono leggere direttamente senza link.
+    """
+    try:
+        with open(filepath, "rb") as f:
+            data = f.read()
+            encoded = base64.b64encode(data).decode()
+            return f"data:image/png;base64,{encoded}"
+    except FileNotFoundError:
+        # Se non trova il file, usa un'icona di riserva online
+        return "https://cdn-icons-png.flaticon.com/512/5969/5969249.png"
 
-# Configurazione base per il browser PC (Favicon)
+# Nome del file che hai caricato su GitHub ACCANTO ad app.py
+FILE_ICONA = "domohome.png" 
+icona_b64 = get_base64_icon(FILE_ICONA)
+
+# ==========================================
+# 2. CONFIGURAZIONE PAGINA
+# ==========================================
 st.set_page_config(
     page_title="Tesla Manager", 
-    page_icon=URL_LOGO, 
+    page_icon=icona_b64, # Qui funziona anche col base64!
     layout="wide"
 )
 
 # ==========================================
-# 2. ICONE AVANZATE (IPHONE + SOCIAL + MINIATURE)
+# 3. HTML PER IPHONE (Con immagine incorporata)
 # ==========================================
 st.markdown(
     f"""
     <head>
-        <link rel="apple-touch-icon" href="{URL_LOGO}">
-        <link rel="apple-touch-icon" sizes="180x180" href="{URL_LOGO}">
-        <link rel="icon" type="image/png" href="{URL_LOGO}">
-        <link rel="shortcut icon" type="image/png" href="{URL_LOGO}">
-        <meta property="og:title" content="Tesla Manager">
-        <meta property="og:description" content="Gestione ricariche domestiche">
-        <meta property="og:image" content="{URL_LOGO}">
-        <meta property="og:type" content="website">
+        <link rel="apple-touch-icon" href="{icona_b64}">
+        <link rel="apple-touch-icon" sizes="180x180" href="{icona_b64}">
+        <link rel="icon" type="image/png" href="{icona_b64}">
+        <link rel="shortcut icon" type="image/png" href="{icona_b64}">
+        
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-title" content="Tesla Manager">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -48,7 +63,7 @@ st.markdown(
 )
 
 # ==========================================
-# 3. GESTIONE LOGIN
+# 4. GESTIONE LOGIN
 # ==========================================
 def login_manager():
     st.markdown("""<style>.stApp {align-items: center; justify-content: center;}</style>""", unsafe_allow_html=True)
@@ -87,7 +102,7 @@ if not login_manager():
     st.stop()
 
 # ==========================================
-# 4. APP VERA E PROPRIA
+# 5. APP DATI
 # ==========================================
 
 conn = st.connection("gsheets", type=GSheetsConnection)
