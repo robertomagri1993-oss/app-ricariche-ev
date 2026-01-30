@@ -9,12 +9,14 @@ import extra_streamlit_components as stx
 # 1. CONFIGURAZIONE ICONA
 # ==========================================
 # INCOLLA QUI SOTTO IL TUO LINK DI POSTIMAGES (deve finire con .png)
-URL_LOGO = "INSERISCI_QUI_IL_TUO_LINK_NUOVO.png" 
+
+URL_LOGOPAGE = "https://raw.githubusercontent.com/dredgen23/app-ricariche-ev/main/favicon-16x16.png" 
+URL_LOGOAPL = "https://raw.githubusercontent.com/dredgen23/app-ricariche-ev/main/apple-touch-icon.png"
 
 # Configurazione base per il browser PC (Favicon)
 st.set_page_config(
     page_title="Tesla Manager", 
-    page_icon=URL_LOGO, 
+    page_icon=URL_LOGOPAGE, 
     layout="wide"
 )
 
@@ -24,13 +26,13 @@ st.set_page_config(
 st.markdown(
     f"""
     <head>
-        <link rel="apple-touch-icon" href="{URL_LOGO}">
-        <link rel="apple-touch-icon" sizes="180x180" href="{URL_LOGO}">
+        <link rel="apple-touch-icon" href="{URL_LOGOAPL}">
+        <link rel="apple-touch-icon" sizes="180x180" href="{URL_LOGOAPL}">
         <link rel="icon" type="image/png" href="{URL_LOGO}">
-        <link rel="shortcut icon" type="image/png" href="{URL_LOGO}">
+        <link rel="shortcut icon" type="image/png" href="{URL_LOGOPAGE}">
         <meta property="og:title" content="Tesla Manager">
         <meta property="og:description" content="Gestione ricariche domestiche">
-        <meta property="og:image" content="{URL_LOGO}">
+        <meta property="og:image" content="{URL_LOGOPAGE}">
         <meta property="og:type" content="website">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-title" content="Tesla Manager">
