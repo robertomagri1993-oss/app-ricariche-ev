@@ -41,16 +41,16 @@ st.set_page_config(
 # ==========================================
 st.markdown(
     f"""
-    <head>
-        <link rel="apple-touch-icon" href="{icona_b64}">
-        <link rel="apple-touch-icon" sizes="180x180" href="{icona_b64}">
-        <link rel="icon" type="image/png" href="{icona_b64}">
-        <link rel="shortcut icon" type="image/png" href="{icona_b64}">
-        
-        <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-title" content="Tesla Manager">
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    </head>
+    <!-- Icone e Meta Tags (Senza tag head wrapper) -->
+    <link rel="apple-touch-icon" href="{icona_b64}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{icona_b64}">
+    <link rel="icon" type="image/png" href="{icona_b64}">
+    <link rel="shortcut icon" type="image/png" href="{icona_b64}">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Tesla Manager">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
     <style>
         #MainMenu {{visibility: hidden;}}
         footer {{visibility: hidden;}}
