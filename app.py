@@ -10,7 +10,7 @@ import extra_streamlit_components as stx
 # ==========================================
 # INCOLLA QUI SOTTO IL TUO LINK DI POSTIMAGES (deve finire con .png)
 
-URL_LOGOPAGE = "https://raw.githubusercontent.com/dredgen23/app-ricariche-ev/main/favicon-16x16.png" 
+URL_LOGOPAGE = "https://raw.githubusercontent.com/dredgen23/app-ricariche-ev/main/favicon.ico" 
 URL_LOGOAPL = "https://raw.githubusercontent.com/dredgen23/app-ricariche-ev/main/apple-touch-icon.png"
 
 # Configurazione base per il browser PC (Favicon)
