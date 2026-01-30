@@ -4,19 +4,14 @@ from datetime import datetime, timedelta
 import time
 from streamlit_gsheets import GSheetsConnection
 import extra_streamlit_components as stx
+from PIL import Image
 
 # ==========================================
 # 1. CONFIGURAZIONE ICONA
 # ==========================================
-# INCOLLA QUI SOTTO IL TUO LINK DI POSTIMAGES (deve finire con .png)
-URL_LOGO = "https://raw.githubusercontent.com/dredgen23/app-ricariche-ev/main/domohome.png" 
-
-# Configurazione base per il browser PC (Favicon)
-st.set_page_config(
-    page_title="Tesla Manager", 
-    page_icon=URL_LOGO, 
-    layout="wide"
-)
+try:
+    # Carica l'immagine dal file locale per la Favicon del browser
+    icona_locale = Image.open("favicon.ico")
 
 # ==========================================
 # 2. ICONE AVANZATE (IPHONE + SOCIAL + MINIATURE)
