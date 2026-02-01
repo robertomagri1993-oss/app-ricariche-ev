@@ -68,6 +68,14 @@ footer {{visibility: hidden;}}
 header {{visibility: hidden;}}
 .stAppDeployButton {{display:none;}}
 .stApp {{max-width: 100%; padding-top: 1rem;}}
+
+/* CSS OPZIONALE: forza anche i bottoni (Registra/Elimina) a stare affiancati */
+[data-testid="stHorizontalBlock"] {{
+    flex-wrap: nowrap !important;
+}}
+[data-testid="column"] {{
+    min-width: 10px !important;
+}}
 </style>
 """,
     unsafe_allow_html=True
@@ -170,22 +178,8 @@ df_all = compute_analytics(df_ricariche, df_tariffe, df_config)
 tab1, tab2 = st.tabs(["🏠 Home", "📊 Storico & Config"])
 
 with tab1:
-    # --- CSS TRICK PER FORZARE COLONNE AFFIANCATE SU MOBILE ---
-    st.markdown("""
-    <style>
-    /* Forza le colonne metriche a stare sulla stessa riga su mobile */
-    [data-testid="column"] {
-        width: 33% !important;
-        flex: 1 1 33% !important;
-        min-width: 33% !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
     st.title(f"⚡ Tesla Manager {ANNO_CORRENTE}")
     
-    # Per il form di input sopra usiamo un container, che resetterà parzialmente il layout
-    # (Non influisce troppo sulle metriche sotto)
     with st.container(border=True):
         col_inp, col_dummy = st.columns([2,1])
         kwh_in = col_inp.number_input(f"Inserisci kWh", min_value=0.0, step=0.1, value=None, placeholder="0.0")
@@ -209,15 +203,42 @@ with tab1:
         
         st.divider()
         
-        # Le metriche qui sotto ora saranno forzate a stare in riga grazie al CSS sopra
-        c1, c2, c3 = st.columns(3)
+        # --- SOLUZIONE HTML PER VISUALIZZAZIONE SU MOBILE ---
+        # Creiamo un blocco HTML puro che forza il layout orizzontale
         
-        # Per risparmiare spazio su mobile, accorciamo leggermente le label
-        c1.metric(f"💰 Risp.", f"{df_curr['Risparmio'].sum():.0f} €") # Tolto i decimali per spazio
-        c2.metric(f"🔌 kWh", f"{df_mese_corr['kWh'].sum():.0f}")
-        c3.metric(f"💶 Spesa", f"{df_mese_corr['Spesa_EV'].sum():.0f} €")
+        val_risp = f"{df_curr['Risparmio'].sum():.0f}"
+        val_kwh = f"{df_mese_corr['kWh'].sum():.0f}"
+        val_spesa = f"{df_mese_corr['Spesa_EV'].sum():.0f}"
         
-        # --- FIX ORDINAMENTO MESI GRAFICO ---
+        st.markdown(f"""
+            <div style="
+                display: flex; 
+                flex-direction: row; 
+                justify-content: space-between; 
+                align-items: center; 
+                width: 100%; 
+                margin-bottom: 20px; 
+                background-color: transparent;">
+                
+                <div style="flex: 1; text-align: center;">
+                    <div style="font-size: 13px; color: #888; margin-bottom: 2px;">💰 Risp.</div>
+                    <div style="font-size: 22px; font-weight: 700;">{val_risp} €</div>
+                </div>
+                
+                <div style="flex: 1; text-align: center; border-left: 1px solid rgba(150,150,150,0.2); border-right: 1px solid rgba(150,150,150,0.2);">
+                    <div style="font-size: 13px; color: #888; margin-bottom: 2px;">🔌 kWh</div>
+                    <div style="font-size: 22px; font-weight: 700;">{val_kwh}</div>
+                </div>
+                
+                <div style="flex: 1; text-align: center;">
+                    <div style="font-size: 13px; color: #888; margin-bottom: 2px;">💶 Spesa</div>
+                    <div style="font-size: 22px; font-weight: 700;">{val_spesa} €</div>
+                </div>
+                
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # --- GRAFICO ---
         df_chart = df_curr.groupby('Mese')['Spesa_EV'].sum().reset_index()
         df_chart['Mese'] = pd.Categorical(df_chart['Mese'], categories=mesi_ita, ordered=True)
         df_chart = df_chart.sort_values('Mese')
@@ -257,20 +278,4 @@ with tab2:
         if st.button("Salva Tariffa"):
             df_t_temp = df_tariffe.copy()
             if 'Anno' not in df_t_temp.columns: df_t_temp['Anno'] = ""
-            df_t_temp['Anno'] = pd.to_numeric(df_t_temp['Anno'], errors='coerce').fillna(0).astype(int).astype(str)
-            mask = (df_t_temp['Mese'] == t_mese) & (df_t_temp['Anno'] == str(t_anno))
-            df_filtered_t = df_t_temp[~mask]
-            new_tariffa = pd.DataFrame([{"Mese": t_mese, "Anno": str(t_anno), "Prezzo": t_price, "mese_num": mesi_ita.index(t_mese)+1}])
-            df_final_t = pd.concat([df_filtered_t, new_tariffa], ignore_index=True)
-            if 'mese_num' in df_final_t.columns: df_final_t = df_final_t.sort_values(by=['Anno', 'mese_num'], ascending=[False, True])
-            conn.update(worksheet="Tariffe", data=df_final_t); st.cache_data.clear(); st.success("Tariffa salvata!"); time.sleep(1); st.rerun()
-
-    with st.expander("⛽ Prezzo Benzina"):
-        col_a, col_p = st.columns(2)
-        tg_year = col_a.selectbox("Anno", [str(y) for y in range(2024, 2031)], index=2)
-        tg_price = col_p.number_input("Prezzo Benzina", value=1.85, format="%.3f")
-        if st.button("Salva Benzina"):
-            df_c_t = df_config.copy()
-            if not df_c_t.empty: df_c_t['Anno'] = pd.to_numeric(df_c_t['Anno'], errors='coerce').fillna(0).astype(int).astype(str)
-            df_fin = pd.concat([df_c_t[df_c_t['Anno'] != str(tg_year)], pd.DataFrame([{"Anno": str(tg_year), "Prezzo_Benzina": tg_price}])], ignore_index=True)
-            conn.update(worksheet="Config", data=df_fin); st.cache_data.clear(); st.rerun()
+            df_t_temp['Anno'] = pd.to_numeric(df_t_temp['Anno'], errors='coerce').fil
