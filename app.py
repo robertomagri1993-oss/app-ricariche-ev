@@ -21,32 +21,30 @@ def get_base64_of_bin_file(bin_file):
 FILE_FAVICON = "favicon.ico"
 FILE_APPLE_ICON = "apple-touch-icon.png"
 
-# Convertiamo le immagini in stringhe di testo
 b64_favicon = get_base64_of_bin_file(FILE_FAVICON)
 b64_apple = get_base64_of_bin_file(FILE_APPLE_ICON)
 
-# Prepariamo le stringhe HTML complete (con fallback se il file non c'è)
 if b64_favicon:
     favicon_href = f"data:image/x-icon;base64,{b64_favicon}"
 else:
-    favicon_href = "https://cdn-icons-png.flaticon.com/512/5969/5969249.png" # Fallback
+    favicon_href = "https://cdn-icons-png.flaticon.com/512/5969/5969249.png" 
 
 if b64_apple:
     apple_href = f"data:image/png;base64,{b64_apple}"
 else:
-    apple_href = favicon_href # Usa la favicon se manca l'icona apple
+    apple_href = favicon_href 
 
 # ==========================================
 # 2. CONFIGURAZIONE PAGINA
 # ==========================================
 st.set_page_config(
     page_title="Tesla Manager", 
-    page_icon=favicon_href, # Qui accetta anche il base64
+    page_icon=favicon_href, 
     layout="wide"
 )
 
 # ==========================================
-# 3. HTML HEADER PER IPHONE (CORRETTO)
+# 3. HTML HEADER PER IPHONE
 # ==========================================
 st.markdown(
 f"""
@@ -198,40 +196,50 @@ with tab1:
         df_mese_corr = df_curr[df_curr['Mese'] == MESE_CORRENTE]
         
         st.divider()
-        
-        # MODIFICA: Ora usiamo 3 colonne invece di 2
         c1, c2, c3 = st.columns(3)
         
-        # 1. Risparmio Totale Anno
         c1.metric(f"💰 Risp. {ANNO_CORRENTE}", f"{df_curr['Risparmio'].sum():.2f} €")
-        
-        # 2. kWh Mese Corrente
         c2.metric(f"🔌 kWh {MESE_CORRENTE}", f"{df_mese_corr['kWh'].sum():.1f}")
-        
-        # 3. NUOVA METRICA: Spesa Mese Corrente
         c3.metric(f"💶 Spesa {MESE_CORRENTE}", f"{df_mese_corr['Spesa_EV'].sum():.2f} €")
         
         # --- FIX ORDINAMENTO MESI GRAFICO ---
-        # 1. Creiamo un DF sommario per il grafico
         df_chart = df_curr.groupby('Mese')['Spesa_EV'].sum().reset_index()
-        
-        # 2. Trasformiamo la colonna 'Mese' in Categoria Ordinata usando la lista globale mesi_ita
         df_chart['Mese'] = pd.Categorical(df_chart['Mese'], categories=mesi_ita, ordered=True)
-        
-        # 3. Ordiniamo effettivamente i dati
         df_chart = df_chart.sort_values('Mese')
-        
-        # 4. Mostriamo il grafico usando il mese come indice
         st.bar_chart(df_chart.set_index('Mese')['Spesa_EV'])
 
 with tab2:
     st.header("🔍 Analisi Storica")
     if not df_all.empty:
-        col_sel_anno, col_sel_mese = st.columns(2)
+        # --- CALCOLO INDICI DI DEFAULT PER SELECTBOX ---
+        # 1. Anno: cerchiamo l'indice dell'Anno Corrente nella lista anni_disp
+        # 2. Mese: l'indice è semplicemente il numero del mese corrente - 1
         anni_disp = sorted(df_all['Anno'].unique(), reverse=True) or [ANNO_CORRENTE]
-        anno_ricerca = col_sel_anno.selectbox("Anno", anni_disp, key="s_a")
-        mese_ricerca = col_sel_mese.selectbox("Mese", mesi_ita, key="s_m")
+        
+        idx_anno_default = 0
+        if ANNO_CORRENTE in anni_disp:
+            idx_anno_default = anni_disp.index(ANNO_CORRENTE)
+            
+        idx_mese_default = OGGI.month - 1 # es: Febbraio è mese 2 -> indice 1
+        
+        col_sel_anno, col_sel_mese = st.columns(2)
+        
+        anno_ricerca = col_sel_anno.selectbox(
+            "Anno", 
+            anni_disp, 
+            index=idx_anno_default, # Default: Anno corrente se presente
+            key="s_a"
+        )
+        
+        mese_ricerca = col_sel_mese.selectbox(
+            "Mese", 
+            mesi_ita, 
+            index=idx_mese_default, # Default: Mese corrente
+            key="s_m"
+        )
+        
         df_mirato = df_all[(df_all['Anno'] == anno_ricerca) & (df_all['Mese'] == mese_ricerca)]
+        
         with st.container(border=True):
             if not df_mirato.empty:
                 m1, m2, m3 = st.columns(3)
@@ -241,7 +249,8 @@ with tab2:
                 df_display = df_mirato[['Data', 'kWh', 'Spesa_EV']].copy()
                 df_display['Data'] = df_display['Data'].dt.strftime('%d/%m/%Y')
                 st.dataframe(df_display.sort_values(by='Data', ascending=False), use_container_width=True, hide_index=True)
-            else: st.info(f"Nessun dato per {mese_ricerca} {anno_ricerca}")
+            else: 
+                st.info(f"Nessun dato per {mese_ricerca} {anno_ricerca}")
     
     st.divider(); st.header("⚙️ Impostazioni")
     with st.expander("📅 Tariffa Luce"):
