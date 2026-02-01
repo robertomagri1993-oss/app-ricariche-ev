@@ -46,33 +46,34 @@ st.set_page_config(
 )
 
 # ==========================================
-# 3. HTML HEADER PER IPHONE (Con immagini incorporate)
+# 3. HTML HEADER PER IPHONE (CORRETTO)
 # ==========================================
+# NOTA: Le righe qui sotto NON devono avere spazi all'inizio
 st.markdown(
-    f"""
-    <head>
-        <link rel="apple-touch-icon" href="{apple_href}">
-        <link rel="apple-touch-icon" sizes="180x180" href="{apple_href}">
-        <link rel="icon" type="image/x-icon" href="{favicon_href}">
-        <link rel="shortcut icon" type="image/x-icon" href="{favicon_href}">
-        
-        <meta property="og:title" content="Tesla Manager">
-        <meta property="og:description" content="Gestione ricariche domestiche">
-        <meta property="og:image" content="{apple_href}">
-        <meta property="og:type" content="website">
-        
-        <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-title" content="Tesla Manager">
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    </head>
-    <style>
-        #MainMenu {{visibility: hidden;}}
-        footer {{visibility: hidden;}}
-        header {{visibility: hidden;}}
-        .stAppDeployButton {{display:none;}}
-        .stApp {{max-width: 100%; padding-top: 1rem;}}
-    </style>
-    """,
+f"""
+<head>
+<link rel="apple-touch-icon" href="{apple_href}">
+<link rel="apple-touch-icon" sizes="180x180" href="{apple_href}">
+<link rel="icon" type="image/x-icon" href="{favicon_href}">
+<link rel="shortcut icon" type="image/x-icon" href="{favicon_href}">
+
+<meta property="og:title" content="Tesla Manager">
+<meta property="og:description" content="Gestione ricariche domestiche">
+<meta property="og:image" content="{apple_href}">
+<meta property="og:type" content="website">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tesla Manager">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<style>
+#MainMenu {{visibility: hidden;}}
+footer {{visibility: hidden;}}
+header {{visibility: hidden;}}
+.stAppDeployButton {{display:none;}}
+.stApp {{max-width: 100%; padding-top: 1rem;}}
+</style>
+""",
     unsafe_allow_html=True
 )
 
