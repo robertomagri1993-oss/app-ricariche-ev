@@ -17,7 +17,6 @@ def get_base64_of_bin_file(bin_file):
     except FileNotFoundError:
         return None
 
-# Nomi dei file che hai caricato su GitHub
 FILE_FAVICON = "favicon.ico"
 FILE_APPLE_ICON = "apple-touch-icon.png"
 
@@ -171,7 +170,22 @@ df_all = compute_analytics(df_ricariche, df_tariffe, df_config)
 tab1, tab2 = st.tabs(["🏠 Home", "📊 Storico & Config"])
 
 with tab1:
+    # --- CSS TRICK PER FORZARE COLONNE AFFIANCATE SU MOBILE ---
+    st.markdown("""
+    <style>
+    /* Forza le colonne metriche a stare sulla stessa riga su mobile */
+    [data-testid="column"] {
+        width: 33% !important;
+        flex: 1 1 33% !important;
+        min-width: 33% !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
     st.title(f"⚡ Tesla Manager {ANNO_CORRENTE}")
+    
+    # Per il form di input sopra usiamo un container, che resetterà parzialmente il layout
+    # (Non influisce troppo sulle metriche sotto)
     with st.container(border=True):
         col_inp, col_dummy = st.columns([2,1])
         kwh_in = col_inp.number_input(f"Inserisci kWh", min_value=0.0, step=0.1, value=None, placeholder="0.0")
@@ -191,16 +205,17 @@ with tab1:
 
     if not df_all.empty:
         df_curr = df_all[df_all['Anno'] == ANNO_CORRENTE].copy()
-        
-        # Filtriamo i dati del mese corrente per calcoli più puliti
         df_mese_corr = df_curr[df_curr['Mese'] == MESE_CORRENTE]
         
         st.divider()
+        
+        # Le metriche qui sotto ora saranno forzate a stare in riga grazie al CSS sopra
         c1, c2, c3 = st.columns(3)
         
-        c1.metric(f"💰 Risp. {ANNO_CORRENTE}", f"{df_curr['Risparmio'].sum():.2f} €")
-        c2.metric(f"🔌 kWh {MESE_CORRENTE}", f"{df_mese_corr['kWh'].sum():.1f}")
-        c3.metric(f"💶 Spesa {MESE_CORRENTE}", f"{df_mese_corr['Spesa_EV'].sum():.2f} €")
+        # Per risparmiare spazio su mobile, accorciamo leggermente le label
+        c1.metric(f"💰 Risp.", f"{df_curr['Risparmio'].sum():.0f} €") # Tolto i decimali per spazio
+        c2.metric(f"🔌 kWh", f"{df_mese_corr['kWh'].sum():.0f}")
+        c3.metric(f"💶 Spesa", f"{df_mese_corr['Spesa_EV'].sum():.0f} €")
         
         # --- FIX ORDINAMENTO MESI GRAFICO ---
         df_chart = df_curr.groupby('Mese')['Spesa_EV'].sum().reset_index()
@@ -211,32 +226,14 @@ with tab1:
 with tab2:
     st.header("🔍 Analisi Storica")
     if not df_all.empty:
-        # --- CALCOLO INDICI DI DEFAULT PER SELECTBOX ---
-        # 1. Anno: cerchiamo l'indice dell'Anno Corrente nella lista anni_disp
-        # 2. Mese: l'indice è semplicemente il numero del mese corrente - 1
         anni_disp = sorted(df_all['Anno'].unique(), reverse=True) or [ANNO_CORRENTE]
-        
         idx_anno_default = 0
-        if ANNO_CORRENTE in anni_disp:
-            idx_anno_default = anni_disp.index(ANNO_CORRENTE)
-            
-        idx_mese_default = OGGI.month - 1 # es: Febbraio è mese 2 -> indice 1
+        if ANNO_CORRENTE in anni_disp: idx_anno_default = anni_disp.index(ANNO_CORRENTE)
+        idx_mese_default = OGGI.month - 1 
         
         col_sel_anno, col_sel_mese = st.columns(2)
-        
-        anno_ricerca = col_sel_anno.selectbox(
-            "Anno", 
-            anni_disp, 
-            index=idx_anno_default, # Default: Anno corrente se presente
-            key="s_a"
-        )
-        
-        mese_ricerca = col_sel_mese.selectbox(
-            "Mese", 
-            mesi_ita, 
-            index=idx_mese_default, # Default: Mese corrente
-            key="s_m"
-        )
+        anno_ricerca = col_sel_anno.selectbox("Anno", anni_disp, index=idx_anno_default, key="s_a")
+        mese_ricerca = col_sel_mese.selectbox("Mese", mesi_ita, index=idx_mese_default, key="s_m")
         
         df_mirato = df_all[(df_all['Anno'] == anno_ricerca) & (df_all['Mese'] == mese_ricerca)]
         
@@ -249,8 +246,7 @@ with tab2:
                 df_display = df_mirato[['Data', 'kWh', 'Spesa_EV']].copy()
                 df_display['Data'] = df_display['Data'].dt.strftime('%d/%m/%Y')
                 st.dataframe(df_display.sort_values(by='Data', ascending=False), use_container_width=True, hide_index=True)
-            else: 
-                st.info(f"Nessun dato per {mese_ricerca} {anno_ricerca}")
+            else: st.info(f"Nessun dato per {mese_ricerca} {anno_ricerca}")
     
     st.divider(); st.header("⚙️ Impostazioni")
     with st.expander("📅 Tariffa Luce"):
