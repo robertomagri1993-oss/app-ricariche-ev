@@ -67,15 +67,7 @@ f"""
 footer {{visibility: hidden;}}
 header {{visibility: hidden;}}
 .stAppDeployButton {{display:none;}}
-.stApp {{max-width: 100%; padding-top: 1rem;}}
-
-/* CSS OPZIONALE: forza anche i bottoni (Registra/Elimina) a stare affiancati */
-[data-testid="stHorizontalBlock"] {{
-    flex-wrap: nowrap !important;
-}}
-[data-testid="column"] {{
-    min-width: 10px !important;
-}}
+.stApp {{max-width: 100%; padding-top: 1rem; overflow-x: hidden;}} /* Fix scroll orizzontale */
 </style>
 """,
     unsafe_allow_html=True
@@ -207,20 +199,20 @@ with tab1:
         val_kwh = f"{df_mese_corr['kWh'].sum():.0f}"
         val_spesa = f"{df_mese_corr['Spesa_EV'].sum():.0f}"
         
-        # --- BLOCCO HTML CORRETTO (SENZA INDENTAZIONE) ---
+        # --- BLOCCO HTML FLUIDO (NON SBORDA PIÙ) ---
         st.markdown(f"""
-<div style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 20px; background-color: transparent;">
+<div style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; width: 100%; margin: 10px 0; padding: 0;">
 <div style="flex: 1; text-align: center;">
-<div style="font-size: 13px; color: #888; margin-bottom: 2px;">💰 Risp.</div>
-<div style="font-size: 22px; font-weight: 700;">{val_risp} €</div>
+<div style="font-size: 11px; text-transform: uppercase; color: #888; margin-bottom: 2px;">Risp. {ANNO_CORRENTE}</div>
+<div style="font-size: 18px; font-weight: 700;">{val_risp} €</div>
 </div>
-<div style="flex: 1; text-align: center; border-left: 1px solid rgba(150,150,150,0.2); border-right: 1px solid rgba(150,150,150,0.2);">
-<div style="font-size: 13px; color: #888; margin-bottom: 2px;">🔌 kWh</div>
-<div style="font-size: 22px; font-weight: 700;">{val_kwh}</div>
+<div style="flex: 1; text-align: center; border-left: 1px solid #ddd; border-right: 1px solid #ddd;">
+<div style="font-size: 11px; text-transform: uppercase; color: #888; margin-bottom: 2px;">kWh {MESE_CORRENTE[:3]}</div>
+<div style="font-size: 18px; font-weight: 700;">{val_kwh}</div>
 </div>
 <div style="flex: 1; text-align: center;">
-<div style="font-size: 13px; color: #888; margin-bottom: 2px;">💶 Spesa</div>
-<div style="font-size: 22px; font-weight: 700;">{val_spesa} €</div>
+<div style="font-size: 11px; text-transform: uppercase; color: #888; margin-bottom: 2px;">Spesa {MESE_CORRENTE[:3]}</div>
+<div style="font-size: 18px; font-weight: 700;">{val_spesa} €</div>
 </div>
 </div>
 """, unsafe_allow_html=True)
