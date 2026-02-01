@@ -4,36 +4,63 @@ from datetime import datetime, timedelta
 import time
 from streamlit_gsheets import GSheetsConnection
 import extra_streamlit_components as stx
+import base64
 
 # ==========================================
-# 1. CONFIGURAZIONE ICONA
+# 1. FUNZIONE PER ICONE INCORPORATE (Base64)
 # ==========================================
-# INCOLLA QUI SOTTO IL TUO LINK DI POSTIMAGES (deve finire con .png)
+def get_base64_of_bin_file(bin_file):
+    try:
+        with open(bin_file, 'rb') as f:
+            data = f.read()
+        return base64.b64encode(data).decode()
+    except FileNotFoundError:
+        return None
 
-URL_LOGOPAGE = "https://raw.githubusercontent.com/dredgen23/app-ricariche-ev/main/favicon.ico" 
-URL_LOGOAPL = "https://raw.githubusercontent.com/dredgen23/app-ricariche-ev/main/apple-touch-icon.png"
+# Nomi dei file che hai caricato su GitHub
+FILE_FAVICON = "favicon.ico"
+FILE_APPLE_ICON = "apple-touch-icon.png"
 
-# Configurazione base per il browser PC (Favicon)
+# Convertiamo le immagini in stringhe di testo
+b64_favicon = get_base64_of_bin_file(FILE_FAVICON)
+b64_apple = get_base64_of_bin_file(FILE_APPLE_ICON)
+
+# Prepariamo le stringhe HTML complete (con fallback se il file non c'è)
+if b64_favicon:
+    favicon_href = f"data:image/x-icon;base64,{b64_favicon}"
+else:
+    favicon_href = "https://cdn-icons-png.flaticon.com/512/5969/5969249.png" # Fallback
+
+if b64_apple:
+    apple_href = f"data:image/png;base64,{b64_apple}"
+else:
+    apple_href = favicon_href # Usa la favicon se manca l'icona apple
+
+# ==========================================
+# 2. CONFIGURAZIONE PAGINA
+# ==========================================
 st.set_page_config(
     page_title="Tesla Manager", 
-    page_icon=URL_LOGOPAGE, 
+    page_icon=favicon_href, # Qui accetta anche il base64
     layout="wide"
 )
 
 # ==========================================
-# 2. ICONE AVANZATE (IPHONE + SOCIAL + MINIATURE)
+# 3. HTML HEADER PER IPHONE (Con immagini incorporate)
 # ==========================================
 st.markdown(
     f"""
     <head>
-        <link rel="apple-touch-icon" href="{URL_LOGOAPL}">
-        <link rel="apple-touch-icon" sizes="180x180" href="{URL_LOGOAPL}">
-        <link rel="icon" type="image/png" href="{URL_LOGOPAGE}">
-        <link rel="shortcut icon" type="image/png" href="{URL_LOGOPAGE}">
+        <link rel="apple-touch-icon" href="{apple_href}">
+        <link rel="apple-touch-icon" sizes="180x180" href="{apple_href}">
+        <link rel="icon" type="image/x-icon" href="{favicon_href}">
+        <link rel="shortcut icon" type="image/x-icon" href="{favicon_href}">
+        
         <meta property="og:title" content="Tesla Manager">
         <meta property="og:description" content="Gestione ricariche domestiche">
-        <meta property="og:image" content="{URL_LOGOPAGE}">
+        <meta property="og:image" content="{apple_href}">
         <meta property="og:type" content="website">
+        
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-title" content="Tesla Manager">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -50,12 +77,12 @@ st.markdown(
 )
 
 # ==========================================
-# 3. GESTIONE LOGIN
+# 4. GESTIONE LOGIN
 # ==========================================
 def login_manager():
     st.markdown("""<style>.stApp {align-items: center; justify-content: center;}</style>""", unsafe_allow_html=True)
     cookie_manager = stx.CookieManager()
-    cookie_name = "tesla_manager_auth_v2"
+    cookie_name = "tesla_manager_auth_v3" 
     
     time.sleep(0.1) 
     cookie_value = cookie_manager.get(cookie=cookie_name)
@@ -89,7 +116,7 @@ if not login_manager():
     st.stop()
 
 # ==========================================
-# 4. APP VERA E PROPRIA
+# 5. APP DATI
 # ==========================================
 
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -165,12 +192,24 @@ with tab1:
                 st.cache_data.clear(); st.warning("Eliminata."); time.sleep(0.5); st.rerun()
 
     if not df_all.empty:
-        df_curr = df_all[df_all['Anno'] == ANNO_CORRENTE]
+        df_curr = df_all[df_all['Anno'] == ANNO_CORRENTE].copy()
         st.divider()
         c1, c2 = st.columns(2)
         c1.metric(f"💰 Risparmio {ANNO_CORRENTE}", f"{df_curr['Risparmio'].sum():.2f} €")
         c2.metric(f"🔌 kWh {MESE_CORRENTE}", f"{df_curr[df_curr['Mese'] == MESE_CORRENTE]['kWh'].sum():.1f}")
-        st.bar_chart(df_curr.groupby('Mese')['Spesa_EV'].sum())
+        
+        # --- FIX ORDINAMENTO MESI GRAFICO ---
+        # 1. Creiamo un DF sommario per il grafico
+        df_chart = df_curr.groupby('Mese')['Spesa_EV'].sum().reset_index()
+        
+        # 2. Trasformiamo la colonna 'Mese' in Categoria Ordinata usando la lista globale mesi_ita
+        df_chart['Mese'] = pd.Categorical(df_chart['Mese'], categories=mesi_ita, ordered=True)
+        
+        # 3. Ordiniamo effettivamente i dati
+        df_chart = df_chart.sort_values('Mese')
+        
+        # 4. Mostriamo il grafico usando il mese come indice
+        st.bar_chart(df_chart.set_index('Mese')['Spesa_EV'])
 
 with tab2:
     st.header("🔍 Analisi Storica")
