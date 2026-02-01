@@ -48,7 +48,6 @@ st.set_page_config(
 # ==========================================
 # 3. HTML HEADER PER IPHONE (CORRETTO)
 # ==========================================
-# NOTA: Le righe qui sotto NON devono avere spazi all'inizio
 st.markdown(
 f"""
 <head>
@@ -194,10 +193,23 @@ with tab1:
 
     if not df_all.empty:
         df_curr = df_all[df_all['Anno'] == ANNO_CORRENTE].copy()
+        
+        # Filtriamo i dati del mese corrente per calcoli più puliti
+        df_mese_corr = df_curr[df_curr['Mese'] == MESE_CORRENTE]
+        
         st.divider()
-        c1, c2 = st.columns(2)
-        c1.metric(f"💰 Risparmio {ANNO_CORRENTE}", f"{df_curr['Risparmio'].sum():.2f} €")
-        c2.metric(f"🔌 kWh {MESE_CORRENTE}", f"{df_curr[df_curr['Mese'] == MESE_CORRENTE]['kWh'].sum():.1f}")
+        
+        # MODIFICA: Ora usiamo 3 colonne invece di 2
+        c1, c2, c3 = st.columns(3)
+        
+        # 1. Risparmio Totale Anno
+        c1.metric(f"💰 Risp. {ANNO_CORRENTE}", f"{df_curr['Risparmio'].sum():.2f} €")
+        
+        # 2. kWh Mese Corrente
+        c2.metric(f"🔌 kWh {MESE_CORRENTE}", f"{df_mese_corr['kWh'].sum():.1f}")
+        
+        # 3. NUOVA METRICA: Spesa Mese Corrente
+        c3.metric(f"💶 Spesa {MESE_CORRENTE}", f"{df_mese_corr['Spesa_EV'].sum():.2f} €")
         
         # --- FIX ORDINAMENTO MESI GRAFICO ---
         # 1. Creiamo un DF sommario per il grafico
