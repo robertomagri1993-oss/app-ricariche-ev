@@ -195,4 +195,89 @@ with tab1:
             if not df_ricariche.empty:
                 df_rimosso = df_ricariche.drop(df_ricariche.index[-1])
                 conn.update(worksheet="Ricariche", data=df_rimosso)
-                st.cache_data.clear(); st.warning("
+                st.cache_data.clear(); st.warning("Eliminata."); time.sleep(0.5); st.rerun()
+
+    if not df_all.empty:
+        df_curr = df_all[df_all['Anno'] == ANNO_CORRENTE].copy()
+        df_mese_corr = df_curr[df_curr['Mese'] == MESE_CORRENTE]
+        
+        st.divider()
+        
+        val_risp = f"{df_curr['Risparmio'].sum():.0f}"
+        val_kwh = f"{df_mese_corr['kWh'].sum():.0f}"
+        val_spesa = f"{df_mese_corr['Spesa_EV'].sum():.0f}"
+        
+        # --- BLOCCO HTML CORRETTO (SENZA INDENTAZIONE) ---
+        st.markdown(f"""
+<div style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 20px; background-color: transparent;">
+<div style="flex: 1; text-align: center;">
+<div style="font-size: 13px; color: #888; margin-bottom: 2px;">💰 Risp.</div>
+<div style="font-size: 22px; font-weight: 700;">{val_risp} €</div>
+</div>
+<div style="flex: 1; text-align: center; border-left: 1px solid rgba(150,150,150,0.2); border-right: 1px solid rgba(150,150,150,0.2);">
+<div style="font-size: 13px; color: #888; margin-bottom: 2px;">🔌 kWh</div>
+<div style="font-size: 22px; font-weight: 700;">{val_kwh}</div>
+</div>
+<div style="flex: 1; text-align: center;">
+<div style="font-size: 13px; color: #888; margin-bottom: 2px;">💶 Spesa</div>
+<div style="font-size: 22px; font-weight: 700;">{val_spesa} €</div>
+</div>
+</div>
+""", unsafe_allow_html=True)
+        
+        df_chart = df_curr.groupby('Mese')['Spesa_EV'].sum().reset_index()
+        df_chart['Mese'] = pd.Categorical(df_chart['Mese'], categories=mesi_ita, ordered=True)
+        df_chart = df_chart.sort_values('Mese')
+        st.bar_chart(df_chart.set_index('Mese')['Spesa_EV'])
+
+with tab2:
+    st.header("🔍 Analisi Storica")
+    if not df_all.empty:
+        anni_disp = sorted(df_all['Anno'].unique(), reverse=True) or [ANNO_CORRENTE]
+        idx_anno_default = 0
+        if ANNO_CORRENTE in anni_disp: idx_anno_default = anni_disp.index(ANNO_CORRENTE)
+        idx_mese_default = OGGI.month - 1 
+        
+        col_sel_anno, col_sel_mese = st.columns(2)
+        anno_ricerca = col_sel_anno.selectbox("Anno", anni_disp, index=idx_anno_default, key="s_a")
+        mese_ricerca = col_sel_mese.selectbox("Mese", mesi_ita, index=idx_mese_default, key="s_m")
+        
+        df_mirato = df_all[(df_all['Anno'] == anno_ricerca) & (df_all['Mese'] == mese_ricerca)]
+        
+        with st.container(border=True):
+            if not df_mirato.empty:
+                m1, m2, m3 = st.columns(3)
+                m1.metric("Energia", f"{df_mirato['kWh'].sum():.1f}")
+                m2.metric("Spesa EV", f"{df_mirato['Spesa_EV'].sum():.2f} €")
+                m3.metric("Risparmio", f"{df_mirato['Risparmio'].sum():.2f} €")
+                df_display = df_mirato[['Data', 'kWh', 'Spesa_EV']].copy()
+                df_display['Data'] = df_display['Data'].dt.strftime('%d/%m/%Y')
+                st.dataframe(df_display.sort_values(by='Data', ascending=False), use_container_width=True, hide_index=True)
+            else: st.info(f"Nessun dato per {mese_ricerca} {anno_ricerca}")
+    
+    st.divider(); st.header("⚙️ Impostazioni")
+    with st.expander("📅 Tariffa Luce"):
+        c1, c2 = st.columns(2)
+        t_anno = c1.selectbox("Anno", [str(y) for y in range(2024, 2031)], index=2, key="t_a")
+        t_mese = c2.selectbox("Mese", mesi_ita, key="t_m")
+        t_price = st.number_input("Prezzo Luce (€/kWh)", min_value=0.0, step=0.01, format="%.3f")
+        if st.button("Salva Tariffa"):
+            df_t_temp = df_tariffe.copy()
+            if 'Anno' not in df_t_temp.columns: df_t_temp['Anno'] = ""
+            df_t_temp['Anno'] = pd.to_numeric(df_t_temp['Anno'], errors='coerce').fillna(0).astype(int).astype(str)
+            mask = (df_t_temp['Mese'] == t_mese) & (df_t_temp['Anno'] == str(t_anno))
+            df_filtered_t = df_t_temp[~mask]
+            new_tariffa = pd.DataFrame([{"Mese": t_mese, "Anno": str(t_anno), "Prezzo": t_price, "mese_num": mesi_ita.index(t_mese)+1}])
+            df_final_t = pd.concat([df_filtered_t, new_tariffa], ignore_index=True)
+            if 'mese_num' in df_final_t.columns: df_final_t = df_final_t.sort_values(by=['Anno', 'mese_num'], ascending=[False, True])
+            conn.update(worksheet="Tariffe", data=df_final_t); st.cache_data.clear(); st.success("Tariffa salvata!"); time.sleep(1); st.rerun()
+
+    with st.expander("⛽ Prezzo Benzina"):
+        col_a, col_p = st.columns(2)
+        tg_year = col_a.selectbox("Anno", [str(y) for y in range(2024, 2031)], index=2)
+        tg_price = col_p.number_input("Prezzo Benzina", value=1.85, format="%.3f")
+        if st.button("Salva Benzina"):
+            df_c_t = df_config.copy()
+            if not df_c_t.empty: df_c_t['Anno'] = pd.to_numeric(df_c_t['Anno'], errors='coerce').fillna(0).astype(int).astype(str)
+            df_fin = pd.concat([df_c_t[df_c_t['Anno'] != str(tg_year)], pd.DataFrame([{"Anno": str(tg_year), "Prezzo_Benzina": tg_price}])], ignore_index=True)
+            conn.update(worksheet="Config", data=df_fin); st.cache_data.clear(); st.rerun()
